@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" href="#">
+    <style>
+        svg {
+            overflow: visible;
+            /* display: inline-block; */
+            margin-left: 800px;
+            margin-top: 100px;
+        }
+
+        .legend {
+            /* background-color: black; */
+            width: 100%;
+            height: 704px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="legend" class="legend">
+        <svg id="legendsvf" class="legendsvg"></svg>
+    </div>
+    <div style='margin-top: 10%;'>
+        <svg id="svg1" width="1000" height="1000"></svg>
+        <svg id="svg2" width="1000" height="1000"></svg>
+        <svg id="svg3" width="1000" height="1000"></svg><br>
+        <svg id="svg4" width="1000" height="1000"></svg>
+        <svg id="svg5" width="1000" height="1000"></svg>
+        <svg id="svg6" width="1000" height="1000"></svg>
+    </div>
+
+
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-force-reuse.js"></script>
+
+    <script>
+        //布局画布
+
+        var svg1 = d3.select("#svg1").attr('transform', 'scale(1)'),
+            svg2 = d3.select("#svg2").attr('transform', 'scale(1)'),
+            svg3 = d3.select("#svg3").attr('transform', 'scale(1)'),
+            svg4 = d3.select("#svg4").attr('transform', 'scale(1)'),
+            svg5 = d3.select("#svg5").attr('transform', 'scale(1)'),
+            svg6 = d3.select("#svg6").attr('transform', 'scale(1)'),
+            width = +svg1.attr("width"),
+            height = +svg1.attr("height");
+
+
+
+        let simulation1
+        let simulation2
+        let simulation3
+        let simulation4
+        let simulation5
+        let simulation6
+
+
+        const setting = {
+            "rate0": { 'color': "#e0dae8e6", 'radius': 20, 'collide': 50 },
+            "rate1": { 'color': "#EE82EE57", 'radius': 20, 'collide': 50 },
+            "rate2": { 'color': "#8B008B", 'radius': 20, 'collide': 50 },
+            "rate3": { 'color': "#4B0082", 'radius': 20, 'collide': 50 },
+            "rate4": { 'color': "#452ec2", 'radius': 20, 'collide': 50 },
+            "rate5": { 'color': "#191970", 'radius': 20, 'collide': 50 },
+            "user": { 'color': "#b8b4b4 ", 'radius': 5, 'collide': 2 },
+            "movie": { 'color': "red", 'radius': 35, 'collide': 50 },
+
+
+            "m1": { 'color': "#DC143C" },
+            "m2": { 'color': "#DC143C" },
+            "m3": { 'color': "#DC143C" },
+
+            'tag': { 'color': "#7073e1", 'radius': 20, 'collide': 50 },
+            'genome_tag': { 'color': "#b2b5ff", 'radius': 4, 'collide': 5 },
+
+        }
+
+        const linksetting = {
+            "rate": { 'color': "#e9dcdc", 'width': 2, 'dis': 10 },
+            "rated": { 'color': "#e9dcdc", 'width': 2, 'dis': 10 },
+            "tag": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+            "tagged": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+            "relevance": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+        }
+
+
+        //读入数据
+        d3.json("./data/all1-2-3-low/1.2.3-1.json").then(function (data) {
+            console.log(data);
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link1 = svg1.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    // if (d['value'] >= 0.8) {
+                    //     return "#9dd31a90"
+                    // }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node1 = svg1.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended)
+                );
+
+            simulation1 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked1);
+
+            function ticked1() {
+                link1.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node1.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+
+            function dragstarted(d) {
+                if (!d3.event.active) simulation1.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended(d) {
+                if (!d3.event.active) {
+                    simulation1.alphaTarget(0);
+                }
+            }
+
+
+
+        });
+
+
+
+
+        d3.json("./data/all1-2-3-low/1.2.3-2.json").then(function (data) {
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link2 = svg2.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    if (d['value'] >= 0.8) {
+                        return "#9dd31a90"
+                    }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node2 = svg2.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr('id', d => d['id'])
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted2)
+                        .on("drag", dragged2)
+                        .on("end", dragended2)
+                );
+
+            simulation2 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked2);
+
+
+            function ticked2() {
+                link2.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node2.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+            function dragstarted2(d) {
+                if (!d3.event.active) simulation2.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged2(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended2(d) {
+                if (!d3.event.active) {
+                    simulation2.alphaTarget(0);
+                }
+            }
+
+
+        });
+
+
+
+        d3.json("./data/all1-2-3-low/1.2.3-3.json").then(function (data) {
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link3 = svg3.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    if (d['value'] >= 0.8) {
+                        return "#9dd31a90"
+                    }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node3 = svg3.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr('id', d => d['id'])
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted3)
+                        .on("drag", dragged3)
+                        .on("end", dragended3)
+                );
+
+            simulation3 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked3);
+
+
+            function ticked3() {
+                link3.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node3.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+            function dragstarted3(d) {
+                if (!d3.event.active) simulation3.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged3(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended3(d) {
+                if (!d3.event.active) {
+                    simulation3.alphaTarget(0);
+                }
+            }
+
+
+        });
+
+
+
+        d3.json("./data/all1-2-3-low/1.2.3-4.json").then(function (data) {
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link4 = svg4.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    if (d['value'] >= 0.8) {
+                        return "#9dd31a90"
+                    }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node4 = svg4.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr('id', d => d['id'])
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted4)
+                        .on("drag", dragged4)
+                        .on("end", dragended4)
+                );
+
+            simulation4 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked4);
+
+
+            function ticked4() {
+                link4.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node4.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+            function dragstarted4(d) {
+                if (!d3.event.active) simulation4.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged4(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended4(d) {
+                if (!d3.event.active) {
+                    simulation4.alphaTarget(0);
+                }
+            }
+
+
+        });
+
+
+
+        d3.json("./data/all1-2-3-low/1.2.3-5.json").then(function (data) {
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link5 = svg5.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    if (d['value'] >= 0.8) {
+                        return "#9dd31a90"
+                    }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node5 = svg5.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr('id', d => d['id'])
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted5)
+                        .on("drag", dragged5)
+                        .on("end", dragended5)
+                );
+
+            simulation5 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked5);
+
+
+            function ticked5() {
+                link5.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node5.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+            function dragstarted5(d) {
+                if (!d3.event.active) simulation5.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged5(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended5(d) {
+                if (!d3.event.active) {
+                    simulation5.alphaTarget(0);
+                }
+            }
+
+        });
+
+
+        d3.json("./data/all1-2-3-low/1.2.3-6.json").then(function (data) {
+            const nodes = data.nodes
+            const links = data.links
+
+
+            let link6 = svg6.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .style("display", d => {
+                    if (d['value'] < 0.8) {
+                        return 'none'
+                    }
+                    return 'true'
+                })
+                .attr("stroke-width", d => {
+                    if (d['value'] >= 0.8) {
+                        return 2
+                    }
+                    return linksetting[d.type]['width']
+                })
+                .attr("stroke", d => {
+                    if (d['value'] >= 0.8) {
+                        return "#9dd31a90"
+                    }
+                    return linksetting[d.type]['color']
+                })
+
+
+            let node6 = svg6.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr('id', d => d['id'])
+                .attr("r", d => setting[d.type]['radius'])
+                .attr("fill", d => {
+                    if (d['id'][0] == 'm') {
+                        //电影
+                        return setting[d.id]['color']
+                    }
+                    return setting[d.type]['color']
+                })
+                .call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted6)
+                        .on("drag", dragged6)
+                        .on("end", dragended6)
+                );
+
+            simulation6 = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBodyReuse().strength(-80))
+                .force("center", d3.forceCenter(width / 3, height / 3))
+                .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                //设定forceX与forceY使得它们更加聚拢在中间位置
+                .force("x", d3.forceX(width / 2).strength(0.15))
+                .force("y", d3.forceY(height / 2).strength(0.15))
+                .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                .on("tick", ticked6);
+
+
+            function ticked6() {
+                link6.attr("x1", function (d) { return parseInt(d.source.x); })
+                    .attr("y1", function (d) { return parseInt(d.source.y); })
+                    .attr("x2", function (d) { return parseInt(d.target.x); })
+                    .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                node6.attr("cx", function (d) { return parseInt(d.x); })
+                    .attr("cy", function (d) { return parseInt(d.y); });
+            }
+
+            function dragstarted6(d) {
+                if (!d3.event.active) simulation6.alphaTarget(0.3).restart();
+                d.fy = d.y;
+                d.fx = d.x;
+            }
+
+            function dragged6(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended6(d) {
+                if (!d3.event.active) {
+                    simulation6.alphaTarget(0);
+                }
+            }
+
+        });
+
+    </script>
+</body>
+
+</html>

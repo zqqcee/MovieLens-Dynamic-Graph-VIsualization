@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" href="#">
+    <style>
+        #svg1 {
+            overflow: visible;
+            /* display: inline-block; */
+            margin-left: 800px;
+            margin-top: -1000px;
+            position: absolute
+        }
+
+        button {
+            height: 150px;
+            width: 6%;
+            font-size: 50px;
+            margin-left: 100px;
+            margin-top: 100px;
+            font-weight: bold;
+        }
+
+        #legend-bar {
+            /* background-color: black; */
+            width: 1000px;
+            height: 1710px;
+            margin-left: 302px;
+            margin-top: 3%;
+        }
+
+        .title {
+            font-size: 200px;
+            font-weight: bold;
+            margin-left: 35%;
+        }
+
+        svg.legend-svg {
+            margin-top: 0%;
+            margin-left: 0%;
+        }
+
+        #chartsbar {
+            background-color: blue;
+            width: 1500px;
+            height: 100px;
+
+        }
+    </style>
+
+</head>
+
+<body>
+    <p class="title">movielens dashboard</p>
+    <div id="button-bar">
+        <button id="low-1">low-1</button>
+        <button id="low-2">low-2</button>
+        <button id="low-3">low-3</button>
+        <button id="low-4">low-4</button>
+        <button id="low-5">low-5</button>
+        <button id="low-6">low-6</button>
+        <button id="mid-1">mid-1</button>
+        <button id="mid-2">mid-2</button>
+        <button id="mid-3">mid-3</button>
+        <button id="mid-4">mid-4</button>
+        <button id="mid-5">mid-5</button>
+        <button id="mid-6">mid-6</button></br>
+        <button id="high-1">high-1</button>
+        <button id="high-2">high-2</button>
+        <button id="high-3">high-3</button>
+        <button id="high-4">high-4</button>
+        <button id="high-5">high-5</button>
+        <button id="high-6">high-6</button>
+        <button id="hyper-1">hyper-1</button>
+        <button id="hyper-2">hyper-2</button>
+        <button id="hyper-3">hyper-3</button>
+        <button id="hyper-4">hyper-4</button>
+        <button id="hyper-5">hyper-5</button>
+        <button id="hyper-6">hyper-6</button>
+
+        </br></br></br></br></br></br></br></br></br>
+    </div>
+
+    <div id="legend-bar">
+        <svg width="2400" height="2000" class="legend-svg"></svg>
+        <svg width="2400" height="1000" class="charts-bar"></svg>
+        <svg width="2400" height="1000" class="link-bar"></svg>
+    </div>
+
+
+
+    <div id="svg-bar" style='margin-top:0%;margin-left: 3000px;'>
+        <svg id="svg1" width="500" height="1500"></svg>
+    </div>
+
+    <div style="height:4000px;width: 1px;"></div>
+
+
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-force-reuse.js"></script>
+
+    <script>
+        //布局画布j
+
+
+
+        const setting = {
+            "rate0": { 'color': "#e0dae8e6", 'radius': 30, 'collide': 30 },
+            "rate1": { 'color': "#EE82EE57", 'radius': 30, 'collide': 30 },
+            "rate2": { 'color': "#8B008B", 'radius': 30, 'collide': 30 },
+            "rate3": { 'color': "#4B0082", 'radius': 30, 'collide': 30 },
+            "rate4": { 'color': "#452ec2", 'radius': 30, 'collide': 30 },
+            "rate5": { 'color': "#191970", 'radius': 30, 'collide': 30 },
+            "user": { 'color': "#b8b4b4 ", 'radius': 10, 'collide': 2 },
+            "movie": { 'color': "red", 'radius': 50, 'collide': 100 },
+
+
+            "m1": { 'color': "red" },
+            "m2": { 'color': "red" },
+            "m3": { 'color': "red" },
+
+            'tag': { 'color': "#7073e1", 'radius': 27, 'collide': 50 },
+            'genome_tag': { 'color': "#b2b5ff", 'radius': 5, 'collide': 5 },
+
+        }
+        const linksetting = {
+            "rate": { 'color': "#e9dcdc", 'width': 2, 'dis': 5 },
+            "rated": { 'color': "#e9dcdc", 'width': 2, 'dis': 5 },
+            "tag": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+            "tagged": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+            "relevance": { 'color': "#e9dcdc", 'width': 0.8, 'dis': 10 },
+        }
+
+
+
+
+        const legendsetting = {
+            "cx": 400,
+            "cy": 100,
+            'offset': 150,
+            "text-x-offset": 400,
+            "text-y-offset": 15,
+            "font-size": "60px"
+        }
+
+
+        d3.selectAll("button").on("click", function () {
+            let filename = this.id
+            let [dictionary, subGraphIndex] = filename.split('-')
+            let filepath = "./data/all1-2-3-" + dictionary + "/1.2.3-" + subGraphIndex + ".json"
+            draw(filepath)
+        })
+        function nodechartsinit(data) {
+            const nodes = data.nodes
+            const links = data.links
+            const nodesattr = {
+                'moviescount': { 'name': 'moviescount', 'value': nodes.filter(d => d.type == 'movie').length, type: 'movie' },
+                'ratescount': { 'name': 'ratescount', 'value': 6, 'type': 'rate0' },
+                'tagscount': { 'name': 'tagscount', 'value': nodes.filter(d => d.type == 'tag').length, 'type': 'tag' },
+                'userscount': { 'name': 'userscount', 'value': nodes.filter(d => d.type == 'user').length, 'type': 'user' },
+                'genometagscount': { 'name': 'genometagscount', 'value': 1128, 'type': 'genome_tag' },
+            }
+            const nodesdata = [
+                { 'name': 'moviescount', 'value': nodes.filter(d => d.type == 'movie').length, type: 'movie' },
+                { 'name': 'ratescount', 'value': 6, 'type': 'rate0' },
+                { 'name': 'tagscount', 'value': nodes.filter(d => d.type == 'tag').length, 'type': 'tag' },
+                { 'name': 'userscount', 'value': nodes.filter(d => d.type == 'user').length, 'type': 'user' },
+                { 'name': 'genometagscount', 'value': 1128, 'type': 'genome_tag' }
+            ]
+
+            const paddingsetting = {
+                top: 500,
+                bottom: 100,
+                left: 260,
+                right: 100
+            }
+
+            const barchartssetting = {
+                width: 100,
+            }
+
+
+            //节点柱状图
+            const nodechartssvg = d3.select('.charts-bar')
+            nodechartssvg.selectAll('*').remove()
+
+            const width = +nodechartssvg.attr('width'),
+                height = +nodechartssvg.attr('height')
+
+            const max = d3.max(Object.values(nodesattr).map(d => d.value))
+
+
+
+
+            nodechartssvg.append('text')
+                .html('nodes chart')
+                .attr('x', 1200)
+                .attr('y', 90)
+                .attr('font-size', 90)
+                .attr('font-color', 'maroon')
+                .attr('text-anchor', 'middle')
+
+
+            let xScale = d3.scaleBand()
+                .domain(Object.keys(nodesattr))
+                .rangeRound([0, width - paddingsetting.left - paddingsetting.right])
+
+
+            let yScale = d3.scaleLinear()
+                .domain([0, max * 1.5])
+                .range([height, 0]);
+            // 坐标轴
+            const xAxis = d3.axisBottom(xScale)
+                .ticks(0)
+                .tickPadding(12);
+            const yAxis = d3.axisLeft(yScale)
+                .ticks(6)
+            // .tickPadding(8)
+
+            nodechartssvg.append('g')
+                .attr('class', 'r-xAxis')
+                .attr('transform', `translate(${paddingsetting.left},${height - paddingsetting.bottom})`)
+                .call(xAxis);
+
+            nodechartssvg.append('g')
+                .attr('class', 'r-yAxis')
+                .attr('transform', `translate(${paddingsetting.left},${-paddingsetting.bottom})`)
+                .call(yAxis);
+
+            //坐标轴字体
+            d3.select(".r-xAxis")
+                .selectAll("text")
+                .attr("fill", "black")
+                .style("font-size", "40px")
+
+            d3.select(".r-yAxis")
+                .selectAll("text")
+                .attr("fill", "black")
+                .style("font-size", "40px")
+
+
+            let rectGroup = nodechartssvg.selectAll('.rectItem')
+                .data(nodesdata)
+                .enter()
+                .append('g')
+                .attr('class', 'rectItem');
+
+            rectGroup.append('rect')
+                .attr('width', barchartssetting.width)
+                .attr('height', d => height - yScale(d.value))
+                .attr('x', (d) => xScale(d.name) + ((xScale.bandwidth() - barchartssetting.width) / 2))
+                .attr('y', (d) => yScale(d.value) - paddingsetting.bottom)
+                .attr('fill', d => setting[d.type]['color'])
+                .attr('transform', `translate(${paddingsetting.left},${0} )`)
+
+            rectGroup.append('text')
+                .html(d => d.value)
+                .attr('x', (d) => xScale(d.name) + ((xScale.bandwidth() - barchartssetting.width) / 2) + 310)
+                .attr('y', (d) => yScale(d.value) - 120)
+                .attr('font-size', 40)
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+        }
+
+
+        function linkchartsinit(data) {
+
+
+            const nodes = data.nodes
+            const links = data.links
+            const linksattr = {
+                'ratelinkscount': { 'name': 'ratelinkscount', 'value': links.filter(d => d.type == 'rate').length, 'type': 'link' },
+                'ratedlinkscount': { 'name': 'ratedlinkscount', 'value': links.filter(d => d.type == 'rated').length, 'type': 'link' },
+                'taglinkscount': { 'name': 'taglinkscount', 'value': links.filter(d => d.type == 'tag').length, 'type': 'link' },
+                'taggedlinkscount': { 'name': 'taggedlinkscount', 'value': links.filter(d => d.type == 'tagged').length, 'type': 'link' },
+                'genomelinkscount': { 'name': 'genomelinkscount', 'value': 1128 * 3, 'type': 'link' },
+            }
+
+            const linksdata = [
+                { 'name': 'ratelinkscount', 'value': links.filter(d => d.type == 'rate').length, 'type': 'rate' },
+                { 'name': 'ratedlinkscount', 'value': links.filter(d => d.type == 'rated').length, 'type': 'rated' },
+                { 'name': 'taglinkscount', 'value': links.filter(d => d.type == 'tag').length, 'type': 'tag' },
+                { 'name': 'taggedlinkscount', 'value': links.filter(d => d.type == 'tagged').length, 'type': 'tagged' },
+                { 'name': 'genomelinkscount', 'value': 1128 * 3, 'type': 'relevance' }
+            ]
+
+            const paddingsetting = {
+                top: 100,
+                bottom: 100,
+                left: 260,
+                right: 100
+            }
+
+            const barchartssetting = {
+                width: 100,
+            }
+
+
+            //节点柱状图
+            const linkchartssvg = d3.select('.link-bar')
+
+            linkchartssvg.selectAll('*').remove()
+
+            const width = +linkchartssvg.attr('width'),
+                height = +linkchartssvg.attr('height')
+
+            const max = d3.max(Object.values(linksattr).map(d => d.value))
+
+
+
+
+            linkchartssvg.append('text')
+                .html('links chart')
+                .attr('x', 1200)
+                .attr('y', 90)
+                .attr('font-size', 90)
+                .attr('color', 'maroon')
+                .attr('text-anchor', 'middle')
+
+            const xScale = d3.scaleBand()
+                .domain(Object.keys(linksattr))
+                .rangeRound([0, width - paddingsetting.left - paddingsetting.right])
+
+
+            const yScale = d3.scaleLinear()
+                .domain([0, max * 1.8])
+                .range([height, 0]);
+
+
+
+            // 坐标轴
+            const xAxis1 = d3.axisBottom(xScale)
+                .ticks(0)
+                .tickPadding(12);
+
+            const yAxis1 = d3.axisLeft(yScale)
+                .ticks(5)
+
+            if (d3.select('.linkr-xAxis')) {
+                d3.select('.linkr-xAxis').remove()
+            }
+            if (d3.select('.linkr-yAxis')) {
+                d3.select('.linkr-yAxis').remove()
+            }
+
+            linkchartssvg.append('g')
+                .attr('class', 'linkr-xAxis')
+                .attr('transform', `translate(${paddingsetting.left},${height - paddingsetting.bottom})`)
+                .call(xAxis1);
+
+            linkchartssvg.append('g')
+                .attr('class', 'linkr-yAxis')
+                .attr('transform', `translate(${paddingsetting.left},${-paddingsetting.bottom})`)
+                .call(yAxis1);
+
+            //坐标轴字体
+            d3.select(".linkr-xAxis")
+                .selectAll("text")
+                .attr("fill", "black")
+                .style("font-size", "40px")
+
+            d3.select(".linkr-yAxis")
+                .selectAll("text")
+                .attr("fill", "black")
+                .style("font-size", "40px")
+
+
+            let rectGroup1 = linkchartssvg.selectAll('.rect')
+                .data(linksdata)
+                .enter()
+                .append('g')
+                .attr('class', 'rect');
+
+            rectGroup1.append('rect')
+                .attr('width', barchartssetting.width)
+                .attr('height', d => height - yScale(d.value))
+                .attr('x', (d) => xScale(d.name) + ((xScale.bandwidth() - barchartssetting.width) / 2))
+                .attr('y', (d) => yScale(d.value) - paddingsetting.bottom)
+                .attr('fill', d => linksetting[d.type]['color'])
+                .attr('transform', `translate(${paddingsetting.left},${0} )`)
+
+
+            rectGroup1.append('text')
+                .html(d => d.value)
+                .attr('x', (d) => xScale(d.name) + ((xScale.bandwidth() - barchartssetting.width) / 2) + 310)
+                .attr('y', (d) => yScale(d.value) - 120)
+                .attr('font-size', 40)
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+        }
+
+
+
+
+        function legendinit(nodesattr, linksattr) {
+            
+            d3.select('.legend-svg')
+                .append('text')
+                .html('legend')
+                .attr('class', 'legend-count')
+                .attr('x', +legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +legendsetting['cy'] - 9*legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let movielegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'movielegend')
+
+            movielegend
+                .append('circle')
+                .attr('id', 'movie')
+                .attr('r', setting['movie']['radius'])
+                .attr('fill', setting['movie']['color'])
+                .attr('cx', legendsetting['cx'])
+                .attr('cy', legendsetting['cy'] + 0 * legendsetting['offset'])
+
+            let movielegendtext = movielegend
+                .append('text')
+                .html('movie')
+                .attr('x', +d3.select('#movie').attr('cx') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#movie').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let moviecount = movielegend
+                .append('text')
+                .html(nodesattr['moviescount']['value'])
+                .attr('class', 'legend-count')
+                .attr('x', +movielegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#movie').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+            //rate
+            let ratelegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'ratelegend')
+
+            ratelegend
+                .append('circle')
+                .attr('id', 'rate')
+                .attr('r', setting['rate0']['radius'])
+                .attr('fill', 'white')
+                .attr('stroke', 'black')
+                .attr('stroke-width', 1)
+                .attr('cx', legendsetting['cx'])
+                .attr('cy', legendsetting['cy'] + 1 * legendsetting['offset'])
+
+            let ratelegendtext = ratelegend
+                .append('text')
+                .html('rate')
+                .attr('x', +d3.select('#rate').attr('cx') + + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#rate').attr('cy') + + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let ratecount = ratelegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(nodesattr['ratescount']['value'])
+                .attr('x', +ratelegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#rate').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+            //tag
+            let taglegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'taglegend')
+
+            taglegend
+                .append('circle')
+                .attr('id', 'tag')
+                .attr('r', setting['rate0']['radius'])
+                .attr('fill', setting['tag']['color'])
+                .attr('cx', legendsetting['cx'])
+                .attr('cy', legendsetting['cy'] + 2 * legendsetting['offset'])
+
+
+            let taglegendtext = taglegend
+                .append('text')
+                .html('tag')
+                .attr('x', +d3.select('#tag').attr('cx') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#tag').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let tagcount = taglegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(nodesattr['tagscount']['value'])
+                .attr('x', +taglegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#tag').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            //user
+            let userlegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'userlegend')
+
+            userlegend
+                .append('circle')
+                .attr('id', 'user')
+                .attr('r', setting['user']['radius'])
+                .attr('fill', setting['user']['color'])
+                .attr('cx', legendsetting['cx'])
+                .attr('cy', legendsetting['cy'] + 3 * legendsetting['offset'])
+                .attr('stroke', 'black')
+                .attr('stroke-width', 1)
+
+
+            let userlegendtext = userlegend
+                .append('text')
+                .html('user')
+                .attr('x', +d3.select('#user').attr('cx') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#user').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let usercount = userlegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(nodesattr['userscount']['value'])
+                .attr('x', +userlegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#user').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+            //genometag
+            let genometaglegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'genometaglegend')
+
+            genometaglegend
+                .append('circle')
+                .attr('id', 'genometag')
+                .attr('r', setting['genome_tag']['radius'])
+                .attr('fill', setting['genome_tag']['color'])
+                .attr('cx', legendsetting['cx'])
+                .attr('cy', legendsetting['cy'] + 4 * legendsetting['offset'])
+                .attr('stroke', 'black')
+                .attr('stroke-width', 1)
+
+
+            let genometaglegendtext = genometaglegend
+                .append('text')
+                .html('genome_tag')
+                .attr('x', +d3.select('#genometag').attr('cx') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#genometag').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+            let genometagscount = genometaglegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(nodesattr['genometagscount']['value'])
+                .attr('x', +genometaglegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#genometag').attr('cy') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            //ratelink
+            let ratelinklegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'ratelegend')
+
+
+            ratelinklegend
+                .append('line')
+                .attr('id', 'ratelink')
+                .attr('x1', legendsetting['cx'] - 70)
+                .attr('x2', legendsetting['cx'] + 100)
+                .attr('y1', legendsetting['cy'] + 5 * legendsetting['offset'])
+                .attr('y2', legendsetting['cy'] + 5 * legendsetting['offset'])
+                .attr('stroke', '#e9dcdc')
+                .attr('stroke-width', 3)
+
+
+            let ratelinklegendtext = ratelinklegend
+                .append('text')
+                .html('user-rate')
+                .attr('x', legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#ratelink').attr('y2') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+            let ratelinkcount = ratelinklegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(linksattr['ratelinkscount']['value'])
+                .attr('x', +ratelinklegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +ratelinklegendtext.attr('y') + legendsetting['text-y-offset'] - 20)
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+            //ratedlink
+            let ratedlinklegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'ratedlegend')
+
+
+            ratedlinklegend
+                .append('line')
+                .attr('id', 'ratedlink')
+                .attr('x1', legendsetting['cx'] - 70)
+                .attr('x2', legendsetting['cx'] + 100)
+                .attr('y1', legendsetting['cy'] + 6 * legendsetting['offset'])
+                .attr('y2', legendsetting['cy'] + 6 * legendsetting['offset'])
+                .attr('stroke', '#e9dcdc')
+                .attr('stroke-width', 3)
+
+
+            let ratedlinklegendtext = ratedlinklegend
+                .append('text')
+                .html('rate-movie')
+                .attr('x', legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#ratedlink').attr('y2') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let ratedlinkcount = ratedlinklegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(linksattr['ratedlinkscount']['value'])
+                .attr('x', +ratedlinklegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +ratedlinklegendtext.attr('y') + legendsetting['text-y-offset'] - 20)
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+
+            //taglink
+            let taglinklegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'taglinklegend')
+
+
+            taglinklegend
+                .append('line')
+                .attr('id', 'taglinklegend')
+                .attr('x1', legendsetting['cx'] - 70)
+                .attr('x2', legendsetting['cx'] + 100)
+                .attr('y1', legendsetting['cy'] + 7 * legendsetting['offset'])
+                .attr('y2', legendsetting['cy'] + 7 * legendsetting['offset'])
+                .attr('stroke', '#e9dcdc')
+                .attr('stroke-width', 3)
+
+
+            let taglinklegendtext = taglinklegend
+                .append('text')
+                .html('user-tag')
+                .attr('x', legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#taglinklegend').attr('y2') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let taglinkcount = taglinklegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(linksattr['taglinkscount']['value'])
+                .attr('x', +taglinklegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +taglinklegendtext.attr('y') + legendsetting['text-y-offset'] - 20)
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+            //taggedlink
+            let taggedlinklegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'taggedlinklegend')
+
+
+            taggedlinklegend
+                .append('line')
+                .attr('id', 'taggedlinklegend')
+                .attr('x1', legendsetting['cx'] - 70)
+                .attr('x2', legendsetting['cx'] + 100)
+                .attr('y1', legendsetting['cy'] + 8 * legendsetting['offset'])
+                .attr('y2', legendsetting['cy'] + 8 * legendsetting['offset'])
+                .attr('stroke', '#e9dcdc')
+                .attr('stroke-width', 3)
+
+            let taggedlinklegendtext = taggedlinklegend
+                .append('text')
+                .html('tag-movie')
+                .attr('x', legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#taggedlinklegend').attr('y2') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let taggedlinkcount = taggedlinklegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(linksattr['taggedlinkscount']['value'])
+                .attr('x', +taggedlinklegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +taggedlinklegendtext.attr('y') + legendsetting['text-y-offset'] - 20)
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+            //relevance
+            let relevancelinklegend = d3.select('.legend-svg')
+                .append('g')
+                .attr('class', 'relevancelinklegend')
+
+
+            relevancelinklegend
+                .append('line')
+                .attr('id', 'relevancelinklegend')
+                .attr('x1', legendsetting['cx'] - 70)
+                .attr('y1', legendsetting['cy'] + 9 * legendsetting['offset'])
+                .attr('x2', legendsetting['cx'] + 100)
+                .attr('y2', legendsetting['cy'] + 9 * legendsetting['offset'])
+                .attr('stroke', '#e9dcdc')
+                .attr('stroke-width', 3)
+
+
+            let relevancelinklegendtext = relevancelinklegend
+                .append('text')
+                .html('movie-genome')
+                .attr('x', legendsetting['cx'] + legendsetting['text-x-offset'])
+                .attr('y', +d3.select('#relevancelinklegend').attr('y2') + legendsetting['text-y-offset'])
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+            let relevancelinkcount = relevancelinklegend
+                .append('text')
+                .attr('class', 'legend-count')
+                .html(linksattr['genomelinkscount']['value'])
+                .attr('x', +relevancelinklegendtext.attr('x') + legendsetting['text-x-offset'])
+                .attr('y', +relevancelinklegendtext.attr('y') + legendsetting['text-y-offset'] - 20)
+                .attr('font-size', legendsetting['font-size'])
+                .attr('font-color', 'black')
+                .attr('text-anchor', 'middle')
+
+
+
+        }
+
+
+        function draw(filepath) {
+
+            d3.select('#svg1').remove()
+            d3.selectAll('.legend-count').remove()
+
+            var svg1 = d3.select("#svg-bar")
+                .append('svg')
+                .attr('id', 'svg1')
+                .attr('width', 500)
+                .attr('height', 1500)
+
+                .attr('transform', 'scale(1)'),
+
+                width = +svg1.attr("width"),
+                height = +svg1.attr("height");
+
+            let simulation1
+
+
+            d3.json(filepath).then(function (data) {
+
+                //统计
+
+
+                const nodes = data.nodes
+                const links = data.links
+                const nodesattr = {
+                    'moviescount': { 'name': 'moviescount', 'value': nodes.filter(d => d.type == 'movie').length, type: 'movie' },
+                    'ratescount': { 'name': 'ratescount', 'value': 6, 'type': 'rate0' },
+                    'tagscount': { 'name': 'tagscount', 'value': nodes.filter(d => d.type == 'tag').length, 'type': 'tag' },
+                    'userscount': { 'name': 'userscount', 'value': nodes.filter(d => d.type == 'user').length, 'type': 'user' },
+                    'genometagscount': { 'name': 'genometagscount', 'value': 1128, 'type': 'genome_tag' },
+                }
+
+                const linksattr = {
+                    'ratelinkscount': { 'name': 'ratelinkscount', 'value': links.filter(d => d.type == 'rate').length, 'type': 'link' },
+                    'ratedlinkscount': { 'name': 'ratedlinkscount', 'value': links.filter(d => d.type == 'rated').length, 'type': 'link' },
+                    'taglinkscount': { 'name': 'taglinkscount', 'value': links.filter(d => d.type == 'tag').length, 'type': 'link' },
+                    'taggedlinkscount': { 'name': 'taggedlinkscount', 'value': links.filter(d => d.type == 'tagged').length, 'type': 'link' },
+                    'genomelinkscount': { 'name': 'genomelinkscount', 'value': 1128 * 3, 'type': 'link' },
+                }
+
+                legendinit(nodesattr, linksattr)
+
+
+
+                let seennodeid = []
+                let link1 = svg1.append("g")
+                    .attr("class", "links")
+                    .selectAll("line")
+                    .data(links)
+                    .enter().append("line")
+                    .attr('id', d => d.source)
+                    .style("display", d => {
+                        if (d['type'] != 'relevance' || d['value'] >= 0.8) {
+                            //去除游离的基因标签
+                            if (d['type'] == 'relevance') {
+                                seennodeid.push(d['target'])
+                            }
+                            return 'true'
+                        }
+                        return 'none'
+                    })
+                    .attr("stroke-width", d => {
+                        if (d['value'] >= 0.8) {
+                            return 2
+                        }
+                        return linksetting[d.type]['width']
+                    })
+                    .attr("stroke", d => {
+                        //高亮//
+                        // if (d['value'] >= 0.8) {
+                        //     return "#9dd31a90"
+                        // }
+                        return linksetting[d.type]['color']
+                    })
+
+
+                let node1 = svg1.append("g")
+                    .attr("class", "nodes")
+                    .selectAll("circle")
+                    .data(nodes)
+                    .enter()
+                    .append('g')
+                    .attr('class', 'node')
+                    .attr('id', d => {
+                        if (d['type'][0] == 'r') {
+                            return d['type']
+                        }
+                        return d['id']
+                    })
+                    .append("circle")
+                    .attr('id', d => {
+                        if (d['type'][0] == 'r') {
+                            return 'circle' + d['type']
+                        }
+                        return d['id']
+                    })
+                    //去除游离的基因标签
+                    .style('display', d => {
+                        if (d['type'] == 'genome_tag') {
+                            if (seennodeid.indexOf(d['id']) == -1) {
+                                return 'none'
+                            }
+                        } else {
+                            return 'true'
+                        }
+                    })
+                    .attr("r", d => setting[d.type]['radius'])
+                    .attr("fill", d => {
+                        if (d['id'][0] == 'm') {
+                            //电影
+                            return setting[d.id]['color']
+                        }
+                        if (d['type'][0] == 'r') {
+                            return "#ffffff"
+                        }
+                        return setting[d.type]['color']
+                    })
+                    .attr('stroke-width', 1)
+                    .attr('stroke', d => {
+                        if (d['type'][0] == 'r' || d['type'] == 'user') {
+                            return "#8d88a1"
+                        }
+                        return 'none'
+                    })
+                    .call(
+                        d3
+                            .drag()
+                            .on("start", dragstarted)
+                            .on("drag", dragged)
+                            .on("end", dragended)
+                    );
+
+                //创建文本
+                let text0 = d3.select('#rate0')
+                    .append('text')
+                let text1 = d3.select('#rate1')
+                    .append('text')
+                let text2 = d3.select('#rate2')
+                    .append('text')
+                let text3 = d3.select('#rate3')
+                    .append('text')
+                let text4 = d3.select('#rate4')
+                    .append('text')
+                let text5 = d3.select('#rate5')
+                    .append('text')
+
+
+                simulation1 = d3.forceSimulation(nodes)
+                    .force("charge", d3.forceManyBodyReuse().strength(-80))
+                    .force("center", d3.forceCenter(width / 3, height / 3))
+                    .force("collide", d3.forceCollide().radius(d => setting[d.type]['collide']).strength(1))
+                    //设定forceX与forceY使得它们更加聚拢在中间位置
+                    .force("x", d3.forceX(width / 2).strength(0.15))
+                    .force("y", d3.forceY(height / 2).strength(0.15))
+                    .force("link", d3.forceLink(data.links).id(d => d.id).strength(0.5).distance(d => linksetting[d.type]['dis']))
+                    .on("tick", ticked1);
+
+
+
+                function ticked1() {
+                    link1.attr("x1", function (d) { return parseInt(d.source.x); })
+                        .attr("y1", function (d) { return parseInt(d.source.y); })
+                        .attr("x2", function (d) { return parseInt(d.target.x); })
+                        .attr("y2", function (d) { return parseInt(d.target.y); });
+
+                    node1.attr("cx", function (d) { return parseInt(d.x); })
+                        .attr("cy", function (d) { return parseInt(d.y); });
+
+                    //让文本跟着圆圈                
+                    text0.text('0')
+                        .attr('x', d3.select('#circlerate0').attr('cx'))
+                        .attr('y', +d3.select('#circlerate0').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+                    text1.text('1')
+                        .attr('x', d3.select('#circlerate1').attr('cx'))
+                        .attr('y', +d3.select('#circlerate1').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+                    text2.text('2')
+                        .attr('x', d3.select('#circlerate2').attr('cx'))
+                        .attr('y', +d3.select('#circlerate2').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+                    text3.text('3')
+                        .attr('x', d3.select('#circlerate3').attr('cx'))
+                        .attr('y', +d3.select('#circlerate3').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+
+                    text4.text('4')
+                        .attr('x', d3.select('#circlerate4').attr('cx'))
+                        .attr('y', +d3.select('#circlerate4').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+                    text5.text('5')
+                        .attr('x', d3.select('#circlerate5').attr('cx'))
+                        .attr('y', +d3.select('#circlerate5').attr('cy') + 18)
+                        .attr('font-size', '50px')
+                        .attr('font-color', 'black')
+                        .attr('text-anchor', 'middle')
+
+                    if (simulation1.alpha() < simulation1.alphaMin()) {
+                        console.log(data);
+                    }
+
+
+                }
+
+
+                function dragstarted(d) {
+                    if (!d3.event.active) simulation1.alphaTarget(0.3).restart();
+                    d.fy = d.y;
+                    d.fx = d.x;
+                }
+
+                function dragged(d) {
+                    d.fx = d3.event.x;
+                    d.fy = d3.event.y;
+                }
+
+                function dragended(d) {
+                    if (!d3.event.active) {
+                        simulation1.alphaTarget(0);
+                    }
+                }
+
+
+
+                function saveJSON(data, filename) {
+                    if (!data) {
+                        alert('保存的数据为空');
+                        return;
+                    }
+                    if (!filename)
+                        filename = 'json.json'
+                    if (typeof data === 'object') {
+                        data = JSON.stringify(data, undefined, 4)
+                    }
+                    var blob = new Blob([data], { type: 'text/json' }),
+                        e = document.createEvent('MouseEvents'),
+                        a = document.createElement('a')
+                    a.download = filename
+                    a.href = window.URL.createObjectURL(blob)
+                    a.dataset.downloadurl = ['text/json', a.download, a.href].join(':')
+                    e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
+                    a.dispatchEvent(e)
+                }
+
+
+                
+
+                //高亮节点
+                d3.selectAll('circle')
+                    .on('click', e => {
+                        const id = e.id
+                        const circle = d3.select('#' + id)
+                        circle.attr('r', +circle.attr('r') + 15)
+                        circle.attr('fill', '#a3ca1a')
+
+                        d3.selectAll('line#' + id).attr('stroke-width', 10).attr('stroke', 'maroon')
+
+                    })
+
+
+
+            });
+
+
+        }
+        //读入数据
+
+
+
+    </script>
+</body>
+
+</html>
