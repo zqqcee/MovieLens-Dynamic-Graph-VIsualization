@@ -27,12 +27,34 @@
 ### dashboard1 - 可选择不同规模、不同时间片的数据进行展示
 
 - demo-dashboard barcharts.html：包含统计信息（用柱状图显示）
+
+![barchats](doc/barchats.png)
+
 - demo-dashboard iterating.html：不包含统计信息
+
+  ![interation](doc/interation.png)
 
 ### dashboard2 - 先迭代出一个布局结果，再将这个布局结果进行统一渲染
 
 - **demo-dashboard makestatic.html**：点击数据源会缓存一份json数据，数据中的点包含最终坐标位置，可以直接渲染
+
+  ![makestatic](doc/makestatic.png)
+
 - **demo-dashboard static.html**：渲染由`demo-dashboard makestatic.html`生成的节点坐标的数据集
+
+  数据源不对请修改这部分代码：
+
+  ```javascript
+  d3.selectAll("button").on("click", function () {
+    let filename = this.id
+    let [dictionary, subGraphIndex] = filename.split('-')
+    let filepath = "./data/all1-2-3-" + dictionary + "-static/1.2.3-" + subGraphIndex + ".json"
+    console.log(filepath);
+    draw(filepath)
+  })
+  ```
+
+  
 
 ### 时间片比较
 
